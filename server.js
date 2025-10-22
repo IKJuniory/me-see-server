@@ -24,10 +24,17 @@ app.post('/send', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from('messages')
-      .insert([
-        { sender_id: senderId, receiver_id: receiverId, encrypted_text: encryptedText, encrypted_aes_key: encryptedAesKey, iv: iv }
-      ]);
+  .from('messages')
+  .insert([
+    {
+      sender_id: senderId,
+      receiver_id: receiverId,
+      encrypted_text: encryptedText,
+      encrypted_aes_key: encryptedAesKey,
+      iv: iv,
+      timestamp: Date.now() // ← ДОБАВЛЕНО!
+    }
+  ]);
 
     if (error) throw error;
 
