@@ -5,7 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // ← добавь эту строку
+app.use(express.urlencoded({ extended: true }));
 
 // Подключаемся к Supabase
 const supabase = createClient(
@@ -25,31 +25,36 @@ app.post('/send', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-  .from('messages')
-  .insert([
-    {
-      sender_id: senderId,
-      receiver_id: receiverId,
-      encrypted_text: encryptedText,
-      encrypted_aes_key: encryptedAesKey,
-      iv: iv,
-      timestamp: Date.now() // ← ДОБАВЛЕНО!
-    }
-  ]);
+      .from('messages')
+      .insert([
+        {
+          sender_id: senderId,
+          receiver_id: receiverId,
+          encrypted_text: encryptedText,
+          encrypted_aes_key: encryptedAesKey,
+          iv: iv,
+          timestamp: Date.now()
+        }
+      ])
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error.message);
+      return res.status(500).json({ error: 'Ошибка Supabase: ' + error.message });
+    }
 
     console.log(`📨 Сообщение от ${senderId} для ${receiverId} сохранено в Supabase`);
     res.json({ success: true, messageId: data[0].id });
   } catch (e) {
-    console.error('Ошибка сохранения:', e.message);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('Ошибка сервера:', e.message);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 
-// 2. Получить сообщения
+// 2. Получить все сообщения пользователя
 app.get('/messages/:userId', async (req, res) => {
   const { userId } = req.params;
+
   try {
     const { data, error } = await supabase
       .from('messages')
@@ -57,16 +62,20 @@ app.get('/messages/:userId', async (req, res) => {
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('timestamp', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase select error:', error.message);
+      return res.status(500).json({ error: 'Ошибка Supabase: ' + error.message });
+    }
+
     res.json(data);
   } catch (e) {
     console.error('Ошибка загрузки:', e.message);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 
-// === Запуск ===
-const PORT = process.env.PORT || 4000;
+// === Запуск сервера ===
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 MeSSee-сервер запущен на порту ${PORT}`);
 });
